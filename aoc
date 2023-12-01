@@ -1,0 +1,35 @@
+#!/usr/bin/env raku
+
+use v6;
+
+use FindBin :Bin;
+use lib (Bin);
+
+sub input-file(Int $day --> IO::Path:D) {
+	return IO::Path.new(Bin).add("inputs", sprintf("%02d.in.txt", $day));
+}
+
+sub MAIN(Int $day, #= Day (1 .. 25)
+		$file is copy = input-file($day), #= Input file
+		Int :$part = 1, #= Part (1, 2)
+	) {
+	if !(1 <= $day <= 25) {
+		die "Day must be 1 to 25";
+	}
+
+	if $part != 1|2 {
+		die "Part must be 1 or 2";
+	}
+
+	let $file = '/dev/stdin' if $file eq '-';
+
+	my $name = sprintf("AoC::Day%02d", $day);
+	require ::($name);
+
+	my $method = sprintf("&part%d", $part);
+
+	say "$name -> $method";
+	if (my $result = ::($name)::($method)($file.IO.open(:r, enc => 'UTF-8'))) ~~ Cool {
+		say "$result";
+	}
+}
