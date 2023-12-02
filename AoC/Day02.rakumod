@@ -13,7 +13,7 @@ class Game::Turn {
 
 	method is-possible(%config) {
 		$.balls.map({
-			.pairs.map(-> (:key($c), :value($n)) { say ":$c-$n"; %config{$c} >= $n })
+			.pairs.map(-> (:key($c), :value($n)) { %config{$c} >= $n })
 		}).flat.all.Bool;
 	}
 }
@@ -31,8 +31,8 @@ class Game {
 	}
 
 	method !minimum() {
-		say reduce { %^a{$^b.key} max= $^b.value },
-			(|(%()), @.turns.map({ .balls.map: { .pairs } }).flat);
+		reduce { %^a{$^b.key} max= $^b.value; %^a },
+			{}, @.turns».balls».pairs.flat.Slip;
 	}
 
 	method power() {
