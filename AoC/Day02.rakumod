@@ -10,25 +10,11 @@ class Game::Turn {
 	method new(@items) {
 		self.bless(balls => BagHash.new-from-pairs: @items);
 	}
-
-	method is-possible(%config) {
-		$.balls.map({
-			.pairs.map(-> (:key($c), :value($n)) { %config{$c} >= $n })
-		}).flat.all.Bool;
-	}
 }
 
 class Game {
 	has Int $.id;
 	has Game::Turn @.turns;
-
-	method add-turn(Game::Turn $turn) {
-		@.turns.push($turn);
-	}
-
-	method is-possible(%config --> Bool) {
-		@.turns.all.is-possible(%config).Bool;
-	}
 
 	method !minimum() {
 		reduce { %^a{$^b.key} max= $^b.value; %^a },
@@ -38,6 +24,16 @@ class Game {
 	method power() {
 		[*] self!minimum.values
 	}
+}
+
+multi is-possible(%config, Game::Turn $turn) {
+	$turn.balls.map({
+		.pairs.map(-> (:key($c), :value($n)) { %config{$c} >= $n })
+	}).flat.all.Bool;
+}
+
+multi is-possible(%config, Game $game) {
+	is-possible(%config, $game.turns.all).Bool;
 }
 
 grammar Game::Grammar {
@@ -91,7 +87,7 @@ sub get-games(IO::Handle $in) {
 my %config = :red(12), :green(13), :blue(14);
 
 our sub part1(IO::Handle $in) {
-	sum get-games($in).grep({ .is-possible(%config) }).map: { .id }
+	sum get-games($in).grep({ is-possible(%config, $_) }).map: { .id }
 }
 
 our sub part2(IO::Handle $in) {
