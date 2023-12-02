@@ -12,11 +12,9 @@ class Game::Turn {
 	}
 
 	method is-possible(%config) {
-		for $.balls.kv -> $colour, $count {
-			return False if %config{$colour} < $count;
-		}
-
-		return True;
+		$.balls.map({
+			.pairs.map(-> (:key($c), :value($n)) { say ":$c-$n"; %config{$c} >= $n })
+		}).flat.all.Bool;
 	}
 }
 
@@ -33,13 +31,8 @@ class Game {
 	}
 
 	method !minimum() {
-		my %minimum;
-
-		for @.turns.all.balls.kv -> $colour, $count {
-			%minimum{$colour} max= $count;
-		}
-
-		return %minimum;
+		say reduce { %^a{$^b.key} max= $^b.value },
+			(|(%()), @.turns.map({ .balls.map: { .pairs } }).flat);
 	}
 
 	method power() {
