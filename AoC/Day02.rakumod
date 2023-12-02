@@ -31,6 +31,20 @@ class Game {
 	method is-possible(%config --> Bool) {
 		@.turns.all.is-possible(%config).Bool;
 	}
+
+	method !minimum() {
+		my %minimum;
+
+		for @.turns.all.balls.kv -> $colour, $count {
+			%minimum{$colour} max= $count;
+		}
+
+		return %minimum;
+	}
+
+	method power() {
+		[*] self!minimum.values
+	}
 }
 
 grammar Game::Grammar {
@@ -85,4 +99,8 @@ my %config = :red(12), :green(13), :blue(14);
 
 our sub part1(IO::Handle $in) {
 	sum get-games($in).grep({ .is-possible(%config) }).map: { .id }
+}
+
+our sub part2(IO::Handle $in) {
+	sum get-games($in).map({ .power })
 }
