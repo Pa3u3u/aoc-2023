@@ -34,6 +34,17 @@ class Engine::Part {
 	multi method gist(Engine::Part:D:) { self.Str }
 }
 
+class Engine::Symbol {
+	has Str $.s;
+	has Point $.position;
+
+	multi method Str(Engine::Symbol:D:) {
+		"<" ~ $.s ~ " at " ~ $.position.gist ~ ">"
+	}
+
+	multi method gist(Engine::Symbol:D:) { self.Str }
+}
+
 sub is-adjacent(Engine::Part $e, Point $p --> Bool) {
 	$e.position[0].x - 1 <= $p.x <= $e.position[1].x + 1
 		&& $e.position[0].y - 1 <= $p.y <= $e.position[1].y + 1;
@@ -52,7 +63,7 @@ sub split-input(IO::Handle $in) {
 		}
 
 		for ($line ~~ m:g{ <-[0 .. 9, .]> }) -> $m {
-			@symbols.push: Point.new($m.from, $y);
+			@symbols.push: Engine::Symbol.new(s => ~$m, position => Point.new($m.from, $y));
 		}
 	}
 
@@ -60,14 +71,25 @@ sub split-input(IO::Handle $in) {
 }
 
 sub filter-parts(@parts, @symbols) {
-	gather {
-		for @parts -> $part {
-			take $part if is-adjacent($part, @symbols.any)
-		}
+	gather for @parts -> $part {
+		take $part if is-adjacent($part, @symbols.any.position)
 	}
 }
 
 our sub part1(IO::Handle $in) {
 	my (@parts, @symbols) := split-input($in);
 	sum filter-parts(@parts, @symbols).map: *.id
+}
+
+sub gear-ratios(@parts, @gears) {
+	gather for @gears -> $gear {
+		my @ids = @parts.grep: -> $p { is-adjacent($p, $gear.position) }
+		next unless @ids == 2;
+		take [*] @ids>>.id
+	}
+}
+
+our sub part2(IO::Handle $in) {
+	my (@parts, @symbols) := split-input($in);
+	[+] gear-ratios(@parts, @symbols.grep: *.s eq '*')
 }
