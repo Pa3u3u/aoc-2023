@@ -1,0 +1,8 @@
+# Ignore editor files
+*.swp
+
+# Ignore Raku pre-compiled objects
+.precomp/
+
+# Ignore inputs
+inputs/*.txt
