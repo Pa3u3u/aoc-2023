@@ -53,3 +53,15 @@ our sub part1(IO::Handle $in) {
 	my @cards = get-cards($in);
 	[+] @cards.map: { evaluate-card($^a) }
 }
+
+our sub part2(IO::Handle $in) {
+	my @cards = get-cards($in);
+	my @wins = (1) xx @cards;
+
+	for @wins.kv -> $ix, $count {
+		my $n = +@cards[$ix].wins;
+		@wins[$ix + $_] += $count for 1 .. min($n, +@cards - $ix - 1);
+	}
+
+	[+] @wins;
+}
