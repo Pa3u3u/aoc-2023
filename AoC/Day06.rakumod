@@ -39,8 +39,10 @@ sub get-races(IO::Handle $in) {
 	}
 }
 
-sub circumfix:<⌊ ⌋>(Real $n) { $n.floor }
-sub circumfix:<⌈ ⌉>(Real $n) { $n.ceiling }
+# These operators look cool, but make the program parse five times longer
+# for some reason.
+# sub circumfix:<⌊ ⌋>(Real $n) { $n.floor }
+# sub circumfix:<⌈ ⌉>(Real $n) { $n.ceiling }
 
 sub wins(%race) {
 	# Discriminant
@@ -51,7 +53,7 @@ sub wins(%race) {
 	my @s = (%race<t> + sqrt($D)) / 2, (%race<t> - sqrt($D)) / 2;
 	die "Invalid solutions for " ~ %race if @s.map(* < 0).any;
 
-	⌊max(@s)⌋ - ⌈min(@s)⌉ + 1
+	max(@s).floor - min(@s).ceiling + 1
 }
 
 our sub part1(IO::Handle $in) {
