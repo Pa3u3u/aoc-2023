@@ -16,7 +16,7 @@ class Races::Actions {
 	}
 }
 
-sub get-races(IO::Handle $in) {
+sub get-races($in) {
 	my %parts;
 	for $in.lines -> $line {
 		if !(my $p = Races::Grammar.parse($line, actions => Races::Actions)) {
@@ -58,4 +58,9 @@ sub wins(%race) {
 
 our sub part1(IO::Handle $in) {
 	[*] get-races($in).map: &wins
+}
+
+our sub part2(IO::Handle $in) {
+	my $contents = S:g/<?after \d+> \h+ <?before \d+>// with $in.slurp;
+	[*] get-races($contents).map: &wins
 }
