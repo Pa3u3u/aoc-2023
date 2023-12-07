@@ -13,10 +13,6 @@ class Card {
 
 	method gist() { self.Str }}
 
-multi infix:<before>(Card $a, Card $b) { ($a cmp $b) == Less }
-multi infix:<after>(Card $a, Card $b) { ($a cmp $b) == More }
-multi infix:<eqv>(Card $a, Card $b) { ($a cmp $b) == Same }
-
 enum Rank <FiveOfAKind FourOfAKind FullHouse ThreeOfAKind TwoPair OnePair HighCard>;
 
 class Hand {
@@ -70,7 +66,6 @@ class Ranking {
 	}
 
 	method evaluate(@cards) {
-		my @sorted;
 		return FiveOfAKind if self.select(@cards, 5);
 		return FourOfAKind if self.select(@cards, 4);
 		return FullHouse if self!full-house(@cards);
@@ -104,9 +99,6 @@ class Hand::Actions {
 	method cards($/) {
 		make [|$/<card>.map(-> $c { Card.new(label => ~$c) })]
 	}
-}
-
-multi infix:<cmp>(Hand $a, Hand $b) {
 }
 
 sub get-hands($in, $ranking = Ranking) {
