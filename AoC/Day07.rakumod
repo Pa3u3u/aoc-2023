@@ -1,7 +1,7 @@
 unit module AoC::Day07;
 
 
-# Day 06: Camel Cards
+# Day 07: Camel Cards
 # -------------------
 
 class Card {
