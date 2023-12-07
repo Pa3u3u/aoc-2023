@@ -50,7 +50,7 @@ class Ranking {
 		(($a.cards Z $b.cards).flat.map({ self.cmp-cards($^b, $^a) }).grep: * != Same)[0] // Same
 	}
 
-	method !select(@cards, $n) {
+	method select(@cards, $n) {
 		my $bag = @cards.map(-> $c { self.card-value($c) }).Bag;
 		my @sorted = @cards.sort: * Rcmp *;
 		my $key = $bag.pairs.grep(-> $k { $k.value == $n }).map(*.key).sort(&infix:<Rcmp>)[0];
@@ -60,23 +60,23 @@ class Ranking {
 	}
 
 	method !two-pair(@cards) {
-		?my @p1 = self!select(@cards, 2)
-				and my @p2 = self!select(@p1[2 .. *], 2);
+		?my @p1 = self.select(@cards, 2)
+				and my @p2 = self.select(@p1[2 .. *], 2)
 	}
 
 	method !full-house(@cards) {
-		?my @p1 = self!select(@cards, 3)
-				and my @p2 = self!select(@p1[3 .. *], 2)
+		?my @p1 = self.select(@cards, 3)
+				and my @p2 = self.select(@p1[3 .. *], 2)
 	}
 
 	method evaluate(@cards) {
 		my @sorted;
-		return FiveOfAKind if self!select(@cards, 5);
-		return FourOfAKind if self!select(@cards, 4);
+		return FiveOfAKind if self.select(@cards, 5);
+		return FourOfAKind if self.select(@cards, 4);
 		return FullHouse if self!full-house(@cards);
-		return ThreeOfAKind if self!select(@cards, 3);
+		return ThreeOfAKind if self.select(@cards, 3);
 		return TwoPair if self!two-pair(@cards);
-		return OnePair if self!select(@cards, 2);
+		return OnePair if self.select(@cards, 2);
 		return HighCard;
 	}
 
@@ -122,6 +122,47 @@ sub get-hands($in, $ranking = Ranking) {
 our sub part1(IO::Handle $in) {
 	my @hands = get-hands($in);
 	my @ranked = @hands.sort(-> $a, $b { Ranking.cmp-hands($b, $a) });
+
+	[+] @ranked.pairs.map(-> $p { ($p.key + 1) * $p.value.bid });
+}
+
+sub partition(&criterion, @list) {
+	my (@t, @f);
+	for @list -> $e {
+		push (&criterion($e) ?? @t !! @f), $e;
+	}
+
+	return (@t, @f);
+}
+
+class WildRanking is Ranking {
+	method card-value(Card $c) {
+		return 1 if $c.label eq 'J';
+		nextsame;
+	}
+
+	method select(@cards, $n) {
+		my (@jokers, @rest) := partition({ $^a.label eq 'J' }, @cards);
+		my $bag = @rest.map(-> $c { self.card-value($c) }).Bag;
+
+		my @sorted = @rest.sort: * Rcmp *;
+		my $jokers = +@jokers;
+
+		my $key = $bag.pairs.grep(-> $k { $k.value + $jokers >= $n }).map(*.key).sort(&infix:<Rcmp>)[0];
+		my $borrowed = $n - $bag{$key};
+
+		nextsame if !$key;
+
+		return |@sorted.grep({ self.card-value($^a) == $key }),
+			|@jokers[0 ..^ $borrowed],
+			|@sorted.grep({ self.card-value($^a) != $key }),
+			|@jokers[$borrowed .. *];
+	}
+}
+
+our sub part2(IO::Handle $in) {
+	my @hands = get-hands($in, WildRanking);
+	my @ranked = @hands.sort(-> $a, $b { WildRanking.cmp-hands($b, $a) });
 
 	[+] @ranked.pairs.map(-> $p { ($p.key + 1) * $p.value.bid });
 }
