@@ -11,24 +11,7 @@ class Card {
 		"⁅" ~ $.label ~ "⁆"
 	}
 
-	method gist() { self.Str }
-
-	method value() {
-		given $.label {
-			when '2' .. '9' { return $.label.Int }
-			when 'T' { return 10 }
-			when 'J' { return 11 }
-			when 'Q' { return 12 }
-			when 'K' { return 13 }
-			when 'A' { return 14 }
-			default { die "Bug: Unknown label $.label" }
-		}
-	}
-}
-
-multi infix:<cmp>(Card $a, Card $b) {
-	$a.value <=> $b.value
-}
+	method gist() { self.Str }}
 
 multi infix:<before>(Card $a, Card $b) { ($a cmp $b) == Less }
 multi infix:<after>(Card $a, Card $b) { ($a cmp $b) == More }
@@ -56,13 +39,24 @@ grammar Hand::Grammar {
 }
 
 class Ranking {
+	method cmp-cards(Card $a, Card $b) {
+		self.card-value($a) <=> self.card-value($b)
+	}
+
+	method cmp-hands(Hand $a, Hand $b) {
+		return Less if $a.rank < $b.rank;
+		return More if $a.rank > $b.rank;
+
+		(($a.cards Z $b.cards).flat.map({ self.cmp-cards($^b, $^a) }).grep: * != Same)[0] // Same
+	}
+
 	method !select(@cards, $n) {
-		my $bag = @cards.map(*.value).Bag;
+		my $bag = @cards.map(-> $c { self.card-value($c) }).Bag;
 		my @sorted = @cards.sort: * Rcmp *;
 		my $key = $bag.pairs.grep(-> $k { $k.value == $n }).map(*.key).sort(&infix:<Rcmp>)[0];
 
 		return () if !$key;
-		return |@sorted.grep(*.value == $key), |@sorted.grep(*.value != $key);
+		return |@sorted.grep({ self.card-value($^a) == $key }), |@sorted.grep({ self.card-value($^a) != $key });
 	}
 
 	method !two-pair(@cards) {
@@ -85,11 +79,25 @@ class Ranking {
 		return OnePair if self!select(@cards, 2);
 		return HighCard;
 	}
+
+	method card-value(Card $c) {
+		given $c.label {
+			when '2' .. '9' { return $c.label.Int }
+			when 'T' { return 10 }
+			when 'J' { return 11 }
+			when 'Q' { return 12 }
+			when 'K' { return 13 }
+			when 'A' { return 14 }
+			default { die "Bug: Unknown label $c.label" }
+		}
+	}
 }
 
 class Hand::Actions {
+	has $.ranking;
+
 	method TOP($/) {
-		my $rank = Ranking.evaluate($/<cards>.made);
+		my $rank = $.ranking.evaluate($/<cards>.made);
 		make Hand.new(cards => $/<cards>.made, rank => $rank, bid => +$/<number>)
 	}
 
@@ -99,14 +107,11 @@ class Hand::Actions {
 }
 
 multi infix:<cmp>(Hand $a, Hand $b) {
-	return Less if $a.rank < $b.rank;
-	return More if $a.rank > $b.rank;
-	(($a.cards Z[Rcmp] $b.cards).grep: * != Same)[0] // Same
 }
 
-sub get-hands($in) {
+sub get-hands($in, $ranking = Ranking) {
 	gather for $in.lines -> $line {
-		if my $p = Hand::Grammar.parse($line, actions => Hand::Actions) {
+		if my $p = Hand::Grammar.parse($line, actions => Hand::Actions.new(:$ranking)) {
 			take $p.made;
 		} else {
 			die "Cannot parse input '$line'";
@@ -114,12 +119,9 @@ sub get-hands($in) {
 	}
 }
 
-sub C($c) { Card.new(label => $c) }
-sub CC($s) { $s.comb.map(-> $c { C($c) }) }
-
 our sub part1(IO::Handle $in) {
 	my @hands = get-hands($in);
-	my @ranked = @hands.sort: * Rcmp *;
+	my @ranked = @hands.sort(-> $a, $b { Ranking.cmp-hands($b, $a) });
 
 	[+] @ranked.pairs.map(-> $p { ($p.key + 1) * $p.value.bid });
 }
