@@ -21,17 +21,19 @@ class Node::Actions {
 	}
 }
 
-sub transit(@cmd, $rules, $start, $end) {
-	my $n = 0;
+sub transit(@cmd, $rules, $start, $cond) {
+	my $step = 0;
 	my $node = $start;
 
-	while $node ne $end {
-		$node = $rules{$node}{@cmd[$n % @cmd.elems]};
-		$n++;
+	while $node !~~ $cond {
+		my $direction = @cmd[$step % @cmd.elems];
+		$node = $rules{$node}{$direction};
+		$step++;
 	}
 
-	return $n;
+	$step;
 }
+
 
 our sub part1(IO::Handle $in) {
 	if !(my $p = Node::Grammar.parse($in.slurp, actions => Node::Actions)) {
@@ -39,5 +41,14 @@ our sub part1(IO::Handle $in) {
 	}
 
 	my (@cmd, $rules) := $p.made;
-	transit(@cmd, $rules, 'AAA', 'ZZZ')
+	transit(@cmd, $rules, 'AAA', rx/^ZZZ$/)
+}
+
+our sub part2(IO::Handle $in) {
+	if !(my $p = Node::Grammar.parse($in.slurp, actions => Node::Actions)) {
+		die "Cannot parse input"
+	}
+
+	my (@cmd, $rules) := $p.made;
+	[lcm] $rules.keys.grep(* ~~ /A $$/).map({transit(@cmd, $rules, $^a, rx/Z $$/)});
 }
