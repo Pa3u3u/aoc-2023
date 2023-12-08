@@ -26,8 +26,7 @@ sub transit(@cmd, $rules, $start, $cond) {
 	my $node = $start;
 
 	while $node !~~ $cond {
-		my $direction = @cmd[$step % @cmd.elems];
-		$node = $rules{$node}{$direction};
+		$node = $rules{$node}{@cmd[$step % @cmd.elems]};
 		$step++;
 	}
 
