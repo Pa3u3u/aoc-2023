@@ -19,13 +19,22 @@ class Pt {
 	has $.x;
 	has $.y;
 
-	method new($x, $y) { self.bless(:$x, :$y) }
+	method new(Numeric $x, Numeric $y) { self.bless(:$x, :$y) }
 	method Str() { "[$.x, $.y]" }
 	method gist() { self.Str }
 }
 
 multi infix:<eqv>(Pt $a, Pt $b) {
 	$a.x == $b.x && $a.y == $b.y
+}
+
+multi infix:<↦>(Pt $a, Pt $b --> Dir) {
+	given ($b.x - $a.x, $b.y - $a.y) {
+		when ( 0, -1) { North }
+		when ( 1,  0) { East }
+		when ( 0,  1) { South }
+		when (-1,  0) { West }
+	}
 }
 
 sub at(@map, Pt $p) is rw {
@@ -43,6 +52,7 @@ multi infix:<⋗>(Pt $p, Dir $d) {
 
 sub read-map($in) {
 	my @map;
+	my $start;
 
 	my $y = 0;
 	for $in.lines -> $line {
@@ -54,26 +64,17 @@ sub read-map($in) {
 				when 'J' { @map[$y; $x] = (North, West).Set }
 				when '7' { @map[$y; $x] = (South, West).Set }
 				when 'F' { @map[$y; $x] = (South, East).Set }
-				when 'S' { @map[$y; $x] = (North, East, South, West).Set }
+				when 'S' {
+					$start = Pt.new($x, $y);
+					@map[$y; $x] = (North, East, South, West).Set
+				}
 			}
 		}
 
 		$y++;
 	}
 
-	return @map;
-}
-
-sub is-start($cell) {
-	$cell eqv (North, East, South, West).Set
-}
-
-sub find-start(@map) {
-	for @map.kv -> $y, $rows {
-		for $rows.kv -> $x, $c {
-			return Pt.new($x, $y) if is-start($c);
-		}
-	}
+	return ($start, @map);
 }
 
 sub is-connected(@map, $a, $b) {
@@ -118,6 +119,52 @@ sub find-path(@map, $s) {
 }
 
 our sub part1(IO::Handle $in) {
-	my @map = read-map($in);
-	floor(find-path(@map, find-start(@map)) / 2)
+	my ($start, @map) := read-map($in);
+	floor(find-path(@map, $start) / 2)
+}
+
+sub hash-path(@path) {
+	my %tiles = Hash.new;
+
+	for @path -> $p {
+		%tiles{$p.y}{$p.x} = True;
+	}
+
+	return %tiles;
+}
+
+sub count-tiles(@map, @path, $rx, $ry) {
+	my %is-path = hash-path(@path);
+	my $enclosed = 0;
+
+	for |$ry -> $y {
+		my %state = North => False, South => False;
+
+		for |$rx -> $x {
+			my $tile = at(@map, Pt.new($x, $y));
+
+			if %is-path{$y}{$x} {
+				for North, South -> $d {
+					%state{$d} = !%state{$d} if $d ∈ $tile;
+				}
+			} else {
+				$enclosed++ if %state{North};
+				# die "Inconsistent state" if %state{North} xor %state{South};
+			}
+		}
+	}
+
+	return $enclosed;
+}
+
+sub fix-start(@map, $s, @neigh) {
+	at(@map, $s) = (@neigh.map: $s ↦ *).Set;
+}
+
+our sub part2(IO::Handle $in) {
+	my ($start, @map) := read-map($in);
+	my @path = find-path(@map, $start);
+
+	fix-start(@map, @path[0], @path[1, *-1]);
+	count-tiles(@map, @path, minmax(@path>>.x), minmax(@path>>.y))
 }
