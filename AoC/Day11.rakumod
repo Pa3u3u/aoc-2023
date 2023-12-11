@@ -46,10 +46,10 @@ sub all-distances(@stellaris) {
 	}
 }
 
-sub expansion-rate($max, @stellaris) {
+sub expansion-rate($max, @stellaris, $expansion = 1) {
 	my %map;
-	%map<x>{0 .. $max.x} = 1 xx $max.x + 1;
-	%map<y>{0 .. $max.y} = 1 xx $max.y + 1;
+	%map<x>{0 .. $max.x} = $expansion xx $max.x + 1;
+	%map<y>{0 .. $max.y} = $expansion xx $max.y + 1;
 
 	for @stellaris -> $g {
 		%map<x>{$g.x} = 0;
@@ -80,5 +80,12 @@ our sub part1(IO::Handle $in) {
 	my ($max, @stellaris) := read-stellar-map($in);
 
 	expand-universe($max, @stellaris, expansion-rate($max, @stellaris));
+	all-distances(@stellaris)
+}
+
+our sub part2(IO::Handle $in) {
+	my ($max, @stellaris) := read-stellar-map($in);
+
+	expand-universe($max, @stellaris, expansion-rate($max, @stellaris, 999_999));
 	all-distances(@stellaris)
 }
