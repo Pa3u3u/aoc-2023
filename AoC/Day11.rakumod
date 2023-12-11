@@ -1,20 +1,10 @@
 unit module AoC::Day11;
 
+use AoC::Ext::Pt;
+
 
 # Day 11: Cosmic Expansion
 # ------------------------
-
-class Pt {
-	has Numeric $.x is rw;
-	has Numeric $.y is rw;
-
-	method Str() { "[$.x, $.y]" }
-	method gist() { self.Str }
-}
-
-sub pt(Numeric $x, Numeric $y) {
-	Pt.new(:$x, :$y)
-}
 
 sub read-stellar-map($in) {
 	my @stellaris;

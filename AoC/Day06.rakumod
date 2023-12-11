@@ -1,5 +1,7 @@
 unit module AoC::Day06;
 
+use AoC::Ext::Math;
+
 
 # Day 06: Wait For It
 # -------------------
@@ -39,11 +41,6 @@ sub get-races($in) {
 	}
 }
 
-# These operators look cool, but make the program parse five times longer
-# for some reason.
-# sub circumfix:<⌊ ⌋>(Real $n) { $n.floor }
-# sub circumfix:<⌈ ⌉>(Real $n) { $n.ceiling }
-
 sub wins(%race) {
 	# Discriminant
 	my $D = %race<t> ** 2 - 4 * %race<d>;
@@ -53,7 +50,7 @@ sub wins(%race) {
 	my @s = (%race<t> + sqrt($D)) / 2, (%race<t> - sqrt($D)) / 2;
 	die "Invalid solutions for " ~ %race if @s.map(* < 0).any;
 
-	max(@s).floor - min(@s).ceiling + 1
+	⌊max(@s)⌋ - ⌈min(@s)⌉ + 1
 }
 
 our sub part1(IO::Handle $in) {

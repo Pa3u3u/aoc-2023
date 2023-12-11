@@ -1,5 +1,8 @@
 unit module AoC::Day10;
 
+use AoC::Ext::Math;
+use AoC::Ext::Pt;
+
 
 # Day 10: Pipe Maze
 # -----------------
@@ -13,19 +16,6 @@ multi prefix:<↺>(Dir $d) {
 		when East { West };
 		when West { East };
 	}
-}
-
-class Pt {
-	has $.x;
-	has $.y;
-
-	method new(Numeric $x, Numeric $y) { self.bless(:$x, :$y) }
-	method Str() { "[$.x, $.y]" }
-	method gist() { self.Str }
-}
-
-multi infix:<eqv>(Pt $a, Pt $b) {
-	$a.x == $b.x && $a.y == $b.y
 }
 
 multi infix:<↦>(Pt $a, Pt $b --> Dir) {
@@ -43,10 +33,10 @@ sub at(@map, Pt $p) is rw {
 
 multi infix:<⋗>(Pt $p, Dir $d) {
 	given $d {
-		when North { Pt.new($p.x, $p.y - 1) }
-		when South { Pt.new($p.x, $p.y + 1) }
-		when East { Pt.new($p.x + 1, $p.y) }
-		when West { Pt.new($p.x - 1, $p.y) }
+		when North { pt($p.x, $p.y - 1) }
+		when South { pt($p.x, $p.y + 1) }
+		when East { pt($p.x + 1, $p.y) }
+		when West { pt($p.x - 1, $p.y) }
 	}
 }
 
@@ -65,7 +55,7 @@ sub read-map($in) {
 				when '7' { @map[$y; $x] = (South, West).Set }
 				when 'F' { @map[$y; $x] = (South, East).Set }
 				when 'S' {
-					$start = Pt.new($x, $y);
+					$start = pt($x, $y);
 					@map[$y; $x] = (North, East, South, West).Set
 				}
 			}
@@ -120,7 +110,7 @@ sub find-path(@map, $s) {
 
 our sub part1(IO::Handle $in) {
 	my ($start, @map) := read-map($in);
-	floor(find-path(@map, $start) / 2)
+	⌊find-path(@map, $start) / 2⌋
 }
 
 sub hash-path(@path) {
@@ -141,7 +131,7 @@ sub count-tiles(@map, @path, $rx, $ry) {
 		my %state = North => False, South => False;
 
 		for |$rx -> $x {
-			my $tile = at(@map, Pt.new($x, $y));
+			my $tile = at(@map, pt($x, $y));
 
 			if %is-path{$y}{$x} {
 				for North, South -> $d {
