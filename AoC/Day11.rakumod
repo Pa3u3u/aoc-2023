@@ -47,23 +47,18 @@ sub all-distances(@stellaris) {
 }
 
 sub expansion-rate($max, @stellaris, $expansion = 1) {
-	my %map;
-	%map<x>{0 .. $max.x} = $expansion xx $max.x + 1;
-	%map<y>{0 .. $max.y} = $expansion xx $max.y + 1;
+	my %map = x => %((0 .. $max.x) X=> $expansion), y => %((0 .. $max.y) X=> $expansion);
 
 	for @stellaris -> $g {
-		%map<x>{$g.x} = 0;
-		%map<y>{$g.y} = 0;
+		%map{$_}{$g."$_"()} = 0 for <x y>;
 	}
 
 	my %rate = x => {}, y => {};
 
-	for 0 .. $max.x -> $x {
-		%rate<x>{$x} = (%rate<x>{$x - 1} // 0) + %map<x>{$x};
-	}
-
-	for 0 .. $max.y -> $y {
-		%rate<y>{$y} = (%rate<y>{$y - 1} // 0) + %map<y>{$y};
+	for <x y> -> $key {
+		for 0 .. $max."$key"() -> $v {
+			%rate{$key}{$v} = (%rate{$key}{$v - 1} // 0) + %map{$key}{$v};
+		}
 	}
 
 	return %rate;
@@ -71,8 +66,7 @@ sub expansion-rate($max, @stellaris, $expansion = 1) {
 
 sub expand-universe($max, @stellaris, %expansion-rate) {
 	for @stellaris -> $g {
-		$g.x = $g.x + %expansion-rate<x>{$g.x};
-		$g.y = $g.y + %expansion-rate<y>{$g.y};
+		$g."$_"() += %expansion-rate{$_}{$g."$_"()} for <x y>;
 	}
 }
 
