@@ -4,6 +4,8 @@ unit module AoC::Day12;
 # Day 12: Hot Springs
 # -------------------
 
+use experimental :cached;
+
 sub parse(Str $line) {
 	if $line ~~ /^^ ( <[ # . ? ]>+ ) \s+ ( \d+ | ',' )+ $$/ {
 		return ($/[0].comb, $/[1].split(',')>>.Int);
@@ -12,66 +14,68 @@ sub parse(Str $line) {
 	die "Cannot parse '$line' as input instance";
 }
 
-# (x₁, x₂, …, xₙ) ⪽ (y₁, ₂₂, …, yₙ, …, yₘ) iff
-#   (∀k < n)(xₖ = yₖ) ∧ (xₙ ≤ yₙ)
-multi infix:<⪽>(@a, @b --> Bool) {
-	return False if @a.elems > @b.elems;
-
-	for (@a Z @b).kv -> $i, ($an, $bn) {
-		return False if $i < (@a.elems - 1) && $an != $bn;
-		return False if $i == (@a.elems - 1) && $an > $bn;
+sub search-space(@template, @control, $tx is copy, $cx, %cache) {
+	if (my $cv = %cache{$tx}{$cx}) !=== Any {
+		return $cv;
 	}
 
-	return True;
-}
+	# Skip literal '.'
+	$tx++ while $tx < @template.elems && @template[$tx] eq '.';
 
-# (x₁, x₂, …, xₙ) ⫘ (y₁, ₂₂, …, yₙ, …, yₘ) iff
-#   (∀k ≤ n)(xₖ = yₖ) ∧ (n = m)
-multi infix:<⫘>(@a, @b) {
-	@a eqv @b
-}
+	return 1 if $tx >= @template.elems && $cx >= @control.elems;
+	return 0 if $tx >= @template.elems;
 
-sub set-ok($index, @template, @fixed, @control, @count) {
-	search-space(@template, (|@fixed, '.'), @control, @count)
-}
-
-sub set-failed($index, @template, @fixed, @control, @count) {
-	search-space(@template, (|@fixed, '#'), @control,
-		@fixed.elems == 0 || @fixed[*-1] eq '.' ?? (|@count, 1) !! (|@count[0 .. *-2], @count[*-1] + 1)
-	)
-}
-
-sub is-solution(@template, @fixed, @control, @count) {
-	@template.elems == @fixed.elems
-		&& @count ⫘  @control
-
-}
-
-sub search-space(@template, @fixed, @control, @count) {
-	return 1 if is-solution(@template, @fixed, @control, @count);
-	return 0 if !(@count ⪽  @control);
-
-	my $index = @fixed.elems;
-	given @template[$index] {
-		when '#' {
-			set-failed($index, @template, @fixed, @control, @count)
+	# If there are no groups left, all characters must be '?' or '.'
+	if $cx >= @control.elems {
+		for @template[$tx .. *] -> $c {
+			return 0 if $c eq '#';
 		}
 
-		when '.' {
-			set-ok($index, @template, @fixed, @control, @count)
-		}
-
-		when '?' {
-			set-failed($index, @template, @fixed, @control, @count)
-				+ set-ok($index, @template, @fixed, @control, @count)
-		}
+		return 1;
 	}
+
+	# There must be enough elements left.
+	return 0 if $tx + @control[$cx] > @template.elems;
+
+	# From now on, if something breaks down, we may still continue.
+	my $recurse = True;
+	my $skip = @template[$tx] eq '?';
+
+	# There must be no '.' in the slice, otherwise skip
+	for @template[$tx ..^ $tx + @control[$cx]] -> $c {
+		{ $recurse = False; last } if $c eq '.';
+	}
+
+	# If there is another character, it must be '.' or '?'
+	$recurse = False if (@template[$tx + @control[$cx]] // ' ') eq '#';
+
+	# Try to assign other parts.
+	%cache{$tx}{$cx} = ($recurse ?? search-space(@template, @control, $tx + @control[$cx] + 1, $cx + 1, %cache) !! 0)
+		+ ($skip ?? search-space(@template, @control, $tx + 1, $cx, %cache) !! 0)
 }
 
 sub solve(@template, @control) {
-	[+] search-space(@template, @(), @control, @());
+	[+] search-space(@template, @control, 0, 0, %());
 }
 
 our sub part1(IO::Handle $in) {
 	[+] $in.lines.map({ parse($^a) }).map({ solve($^a[0], $^a[1]) })
+}
+
+sub intersperse(@what, $by-whom) {
+	gather for @what -> $e {
+		FIRST { take $e; next }
+		take $by-whom;
+		take $e;
+	}
+}
+
+sub unfold(@template, @control) {
+	state $n = 0;
+	say "unfold ", ++$n;
+	(intersperse(@template xx 5, '?')>>.List.flat, (@control xx 5).flat)
+}
+
+our sub part2(IO::Handle $in) {
+	[+] $in.lines.map({ parse($^a) }).map({ unfold($^a[0], $^a[1]) }).map({ solve($^a[0], $^a[1]) })
 }
