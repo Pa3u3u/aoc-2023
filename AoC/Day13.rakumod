@@ -19,26 +19,28 @@ sub next-pattern(IO::Handle $in) {
 	return ();
 }
 
-sub is-symmetric(@p, $y, $max-x, $max-y) {
+sub is-symmetric(@p, $y, $max-x, $max-y, $ε) {
+	my $errors = 0;
+
 	for (0 .. $y) -> $l {
 		my $r = 2 * $y - $l + 1;
 		next if $r >= $max-y;
-		return False if @p[$l; (0 ..^ $max-x)] !eqv @p[$r; (0 ..^ $max-x)];
+		$errors += (@p[$l; (0 ..^ $max-x)] Zeq @p[$r; (0 ..^ $max-x)]).grep(!*).elems;
+		return False if $errors > $ε;
 	}
 
-	return True;
+	return $errors == $ε;
 }
 
-sub find-y-axis($label, @p) {
+sub find-y-axis($label, @p, $ε) {
 	my $s = ↔@p;
 	for (0 ..^ (↕@p) - 1) -> $y {
-		return $label => $y if @p[$y; 0 .. $s - 1] eqv @p[$y + 1; 0 .. $s - 1]
-				  && is-symmetric(@p, $y, ↔@p, ↕@p);
+		return $label => $y if is-symmetric(@p, $y, ↔@p, ↕@p, $ε);
 	}
 }
 
-sub find-axis(@p) {
-	find-y-axis('y', @p) // find-y-axis('x', [Z] @p)
+sub find-axis(@p, $ε = 0) {
+	find-y-axis('y', @p, $ε) // find-y-axis('x', ([Z] @p), $ε)
 }
 
 sub evaluate($axis) {
@@ -51,5 +53,11 @@ sub evaluate($axis) {
 our sub part1(IO::Handle $in) {
 	[+] gather while my $p = next-pattern($in) {
 		take evaluate(find-axis($p));
+	}
+}
+
+our sub part2(IO::Handle $in) {
+	[+] gather while my $p = next-pattern($in) {
+		take evaluate(find-axis($p, 1));
 	}
 }
