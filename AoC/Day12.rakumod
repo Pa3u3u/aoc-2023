@@ -4,8 +4,6 @@ unit module AoC::Day12;
 # Day 12: Hot Springs
 # -------------------
 
-use experimental :cached;
-
 sub parse(Str $line) {
 	if $line ~~ /^^ ( <[ # . ? ]>+ ) \s+ ( \d+ | ',' )+ $$/ {
 		return ($/[0].comb, $/[1].split(',')>>.Int);
@@ -71,8 +69,6 @@ sub intersperse(@what, $by-whom) {
 }
 
 sub unfold(@template, @control) {
-	state $n = 0;
-	say "unfold ", ++$n;
 	(intersperse(@template xx 5, '?')>>.List.flat, (@control xx 5).flat)
 }
 
