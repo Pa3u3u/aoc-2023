@@ -23,7 +23,7 @@ sub search-space(@template, @control, $tx is copy, $cx, %cache) {
 	return 1 if $tx >= @template.elems && $cx >= @control.elems;
 	return 0 if $tx >= @template.elems;
 
-	# If there are no groups left, all characters must be '?' or '.'
+	# If there are no groups left, all characters must be '?' or '.'.
 	if $cx >= @control.elems {
 		for @template[$tx .. *] -> $c {
 			return 0 if $c eq '#';
@@ -39,12 +39,12 @@ sub search-space(@template, @control, $tx is copy, $cx, %cache) {
 	my $recurse = True;
 	my $skip = @template[$tx] eq '?';
 
-	# There must be no '.' in the slice, otherwise skip
+	# There must be no '.' in the slice, otherwise skip.
 	for @template[$tx ..^ $tx + @control[$cx]] -> $c {
 		{ $recurse = False; last } if $c eq '.';
 	}
 
-	# If there is another character, it must be '.' or '?'
+	# If there is another character, it must be '.' or '?'.
 	$recurse = False if (@template[$tx + @control[$cx]] // ' ') eq '#';
 
 	# Try to assign other parts.
