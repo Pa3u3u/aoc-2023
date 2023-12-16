@@ -11,62 +11,109 @@ sub read-map(IO::Handle $in) {
 
 	for $in.lines.kv -> $y, $line {
 		last if $line.chars == 0;
-		@pattern[$y; (0 ..^ $line.chars)] = $line.comb;
+		@pattern[(0 ..^ $line.chars); $y] = $line.comb;
 	}
 
+	die "The map is not a square plan" if @pattern.elems != @pattern[0].elems;
 	return @pattern;
 }
 
 sub print-map(@map) {
-	say ('-' xx @map[0].elems).join: '';
+	say ('-' xx @map.elems).join: '';
+	my @transposed = [Z] @map;
 
-	for @map -> $row {
+	for @transposed -> $row {
 		say $row.join: '';
 	}
 
-	say ('-' xx @map[0].elems).join: '';
+	say ('-' xx @map.elems).join: '';
 }
 
-sub infix:<⇝>(@map, Pt $p) is rw {
-	@map[$p.y; $p.x]
-}
+sub tilt(@map) {
+	for @map.kv -> $x, $col {
+		my $free = -1;
 
-sub infix:<∈>(Pt $p, @map) {
-	0 <= $p.x < @map[0].elems && 0 <= $p.y < @map.elems
-}
+		for $col.kv -> $y, $c {
+			given $c {
+				when '#' { $free = -1 }
 
-sub shift(@map, $p, $v) {
-	my $q = $p + $v;
+				when '.' { $free = $y if $free < 0 }
 
-	if !($q ∈ @map) || @map⇝$q ne '.' {
-		@map⇝$p = 'O';
-	} else {
-		@map⇝$p = '.';
-		shift(@map, $q, $v);
-	}
-}
-
-sub tilt(@map, $v, @ix) {
-	for @ix -> $p {
-		shift(@map, $p, $v) if @map⇝$p eq 'O';
+				when 'O' {
+					if $free >= 0 {
+						$col[$free, $y] = 'O', '.';
+						$free++;
+					}
+				}
+			}
+		}
 	}
 
-	return @map
+	@map
 }
 
-sub north(@map) { pt(0, -1), ((0 ..^ @map[0].elems) X (0 ..^ @map.elems))>>.map(&pt).flat }
-sub north-eval(@map, Pt $p) { @map.elems - $p.y }
-
-sub get-load(@map, &e) {
-	[+] gather for @map.kv -> $y, $row {
-		for $row.kv -> $x, $c {
-			my $p = pt($x, $y);
-			take &e(@map, $p) if @map⇝$p eq 'O';
+sub get-load(@map) {
+	[+] gather for @map.kv -> $x, $col {
+		for $col.kv -> $y, $c {
+			take @map.elems - $y if @map[$x; $y] eq 'O';
 		}
 	}
 }
 
 our sub part1(IO::Handle $in) {
 	my @map = read-map($in);
-	get-load(tilt(@map, |north(@map)), &north-eval);
+	get-load(tilt(@map));
+}
+
+sub rotate(@old) {
+	my $size = @old.elems;
+
+	my @new;
+	for @old.kv -> $x, $col {
+		for $col.kv -> $y, $c {
+			@new[$size - $y - 1; $x] = $c;
+		}
+	}
+
+	@old = @new;
+}
+
+sub encode-map(@map) {
+	# Quick & dirty hash function
+	[+] gather for @map.kv -> $x, $col {
+		for $col.kv -> $y, $c {
+			take 1109 * $y + 7 * $x if $c eq 'O';
+		}
+	}
+}
+
+sub detect-loop(@cache, $count) {
+	my $size = @cache.elems;
+	for (0 .. $size - 2) -> $i {
+		if @cache[$i][0] == @cache[$size - 1][0] {
+			my $loops = ($count - $i) div ($size - $i - 1);
+			my $shift = $count - $i - $loops * ($size - $i - 1) - 1;
+
+			return $i + $shift;
+		}
+	}
+
+	return;
+}
+
+our sub part2(IO::Handle $in) {
+	my @map = read-map($in);
+
+	my @cache;
+	my $count = 1_000_000_000;
+	for (0 ..^ $count) -> $cycle {
+		rotate(tilt(@map)) for 0 .. 3;
+		@cache[$cycle] = [encode-map(@map), get-load(@map)];
+
+		if (my $i = detect-loop(@cache, $count)) !=== Any {
+			return @cache[$i][1];
+		}
+	}
+
+	@cache[*-1][1]
 }
