@@ -15,3 +15,7 @@ sub pt(Numeric $x, Numeric $y) is export {
 multi infix:<eqv>(Pt $a, Pt $b) is export {
 	$a.x == $b.x && $a.y == $b.y
 }
+
+multi infix:<+>(Pt $a, Pt $b) is export {
+	Pt.new(x => $a.x + $b.x, y => $a.y + $b.y)
+}
