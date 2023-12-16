@@ -21,36 +21,30 @@ sub illuminati(@map, @q) {
 	my %lights;
 	my %seen;
 
-	while @q && my ($p, $v) = @q.shift {
-		next unless 0 <= $p.y <= @map.end && 0 <= $p.x <= @map[0].end;
-		next if %seen{$p.y}{$p.x}.any eqv $v;
-		%lights{$p.y}{$p.x}++;
-		%seen{$p.y}{$p.x}.push($v);
+	STASH: while @q && my ($p, $v) = @q.shift {
+		while 0 <= $p.y <= @map.end && 0 <= $p.x <= @map[0].end {
+			next STASH if %seen{$p.y}{$p.x}.any eqv $v;
+			%lights{$p.y}{$p.x}++;
+			%seen{$p.y}{$p.x}.push($v);
 
-		given @map[$p.y; $p.x] {
-			when '.' { @q.push([$p + $v, $v]) }
-			when '\\' {
-				my $w = pt($v.y, $v.x);
-				@q.push([$p + $w, $w]);
-			}
-			when '/' {
-				my $w = pt(-$v.y, -$v.x);
-				@q.push([$p + $w, $w]);
-			}
-			when '-' {
-				if $v.x != 0 {
-					@q.push([$p + $v, $v]);
-				} else {
-					@q.push([$p + pt($_, 0), pt($_, 0)]) for -1, 1;
+			given @map[$p.y; $p.x] {
+				when '\\' { $v = pt($v.y, $v.x); }
+				when '/'  { $v = pt(-$v.y, -$v.x); }
+				when '-' {
+					if $v.x == 0 {
+						@q.push([$p + pt(-1, 0), pt(-1, 0)]);
+						$v = pt(1, 0);
+					}
+				}
+				when '|' {
+					if $v.y == 0 {
+						@q.push([$p + pt(0, -1), pt(0, -1)]);
+						$v = pt(0, 1);
+					}
 				}
 			}
-			when '|' {
-				if $v.y != 0 {
-					@q.push([$p + $v, $v]);
-				} else {
-					@q.push([$p + pt(0, $_), pt(0, $_)]) for -1, 1;
-				}
-			}
+
+			$p += $v;
 		}
 	}
 
@@ -60,4 +54,19 @@ sub illuminati(@map, @q) {
 our sub part1(IO::Handle $in) {
 	my @map = read-map($in);
 	[+] illuminati(@map, [[pt(0, 0), pt(+1, 0)],]).values.map(*.elems)
+}
+
+sub all-edges(@map) {
+	|(((0 .. @map[0].end) X (0)) X ((0, 1),)),
+	|(((0 .. @map[0].end) X (@map.end)) X ((0, -1),)),
+	|(((0) X (0 .. @map.end)) X ((1, 0),)),
+	|(((@map[0].end) X (0 .. @map.end)) X ((-1, 0),)),
+}
+
+our sub part2(IO::Handle $in) {
+	my @map = read-map($in);
+
+	[max] all-edges(@map).race.map(-> ($p, $v) {
+		[+] illuminati(@map, [[pt(|$p), pt(|$v)],]).values.map(*.elems)
+	})
 }
