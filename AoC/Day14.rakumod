@@ -18,17 +18,6 @@ sub read-map(IO::Handle $in) {
 	return @pattern;
 }
 
-sub print-map(@map) {
-	say ('-' xx @map.elems).join: '';
-	my @transposed = [Z] @map;
-
-	for @transposed -> $row {
-		say $row.join: '';
-	}
-
-	say ('-' xx @map.elems).join: '';
-}
-
 sub tilt(@map) {
 	for @map.kv -> $x, $col {
 		my $free = -1;
