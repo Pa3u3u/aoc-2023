@@ -62,34 +62,29 @@ sub dir($n) is cached {
 	}
 }
 
-sub neighbours(@map, Pt $tile) {
-	gather for 0 .. 3 -> $ι {
-		my $n = $tile + dir($ι);
-		take ($n, $ι) if $n ∈ @map;
-	}
-}
-
-sub shortest-path(@map, $start, $end) {
+sub shortest-path(@map, $start, $end, $steps) {
 	my %visited;
 
 	my $Q = PQ2.new:
 		0 => ($start, 1, 0, 0),
-		0 => ($start, 2, 0, 0);
+		0 => ($start, 0, 0, 0);
 
 	while $Q.elems {
 		my ($N, $N-ι, $N-step, $N-dist) = $Q.fetch;
-		next if (%visited{$N.y ~ ":" ~ $N.x}{$N-ι ~ ":" ~ $N-step} //= 0)++;
-		return $N-dist if $N eqv $end;
+		next if (%visited{$($N.y, $N.x)}{$($N-ι, $N-step)} //= 0)++;
+		return $N-dist if $N eqv $end && $N-step >= $steps.min;
 
-		for neighbours(@map, $N) -> ($X, $X-ι) {
-			next if $N-ι == ($X-ι + 2) % 4;
-			next if $N-ι == $X-ι && $N-step >= 3;
+		for $N-ι, ($N-ι + 1) % 4, ($N-ι - 1) % 4 -> $X-ι {
+			next if $N-ι != $X-ι && $N-step <  $steps.min;
+			next if $N-ι == $X-ι && $N-step >= $steps.max;
 
+			my $X = $N + dir($X-ι);
+			next if !($X ∈ @map);
 			my $X-step = $N-ι == $X-ι ?? $N-step + 1 !! 1;
 			my $X-dist = $N-dist + @map[$X.y; $X.x];
 
 			$Q.insert($X-dist, ($X, $X-ι, $X-step, $X-dist))
-				unless %visited{$X.y ~ ":" ~ $X.x}{$X-ι ~ ":" ~ $X-step};
+				unless %visited{$($X.y, $X.x)}{$($X-ι, $X-step)};
 		}
 	}
 
@@ -98,5 +93,10 @@ sub shortest-path(@map, $start, $end) {
 
 our sub part1(IO::Handle $in) {
 	my @map = read-map($in);
-	shortest-path(@map, pt(0, 0), pt(@map.end, @map[0].end))
+	shortest-path(@map, pt(0, 0), pt(@map[0].end, @map.end), 0 .. 3)
+}
+
+our sub part2(IO::Handle $in) {
+	my @map = read-map($in);
+	shortest-path(@map, pt(0, 0), pt(@map[0].end, @map.end), 4 .. 10)
 }
