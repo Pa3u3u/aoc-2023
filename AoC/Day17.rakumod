@@ -80,6 +80,7 @@ sub shortest-path(@map, $start, $end, $steps) {
 
 			my $X = $N + dir($X-ι);
 			next if !($X ∈ @map);
+
 			my $X-step = $N-ι == $X-ι ?? $N-step + 1 !! 1;
 			my $X-dist = $N-dist + @map[$X.y; $X.x];
 
