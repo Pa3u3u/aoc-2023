@@ -50,3 +50,16 @@ our sub part1(IO::Handle $in) {
 	my @points = get-points(pt(0, 0), @plan);
 	abs(polygon-area(@points))
 }
+
+sub convert($i) {
+	{
+		o => {0 => 'R', 1 => 'D', 2 => 'L', 3 => 'U'}{$i<rgb>.substr(5)},
+		n => +("0x" ~ $i<rgb>.substr(0 .. 4)),
+	}
+}
+
+our sub part2(IO::Handle $in) {
+	my @plan = $in.lines.map: &read-dig-plan;
+	my @points = get-points(pt(0, 0), @plan.map: &convert);
+	abs(polygon-area(@points))
+}
