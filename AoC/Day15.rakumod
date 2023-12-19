@@ -20,7 +20,7 @@ sub interpret(@boxes, $command) {
 	my $box = hash(~$<label>);
 	for @boxes[$box].kv -> $i, $lens {
 		next unless $lens<label> eq $<label>;
-		
+
 		if ($<symbol> eq '-') {
 			@boxes[$box].splice($i, 1);
 		} else {
