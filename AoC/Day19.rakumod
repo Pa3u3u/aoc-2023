@@ -134,3 +134,62 @@ our sub part1(IO::Handle $in) {
 	my (%workflows, @items) := parse($in);
 	[+] filter-items(%workflows, @items).map(*.values).flat
 }
+
+sub cut-item($i, $b) {
+	my $old = $i{$b.attr};
+	my @new = $b.op eqv Less
+		?? (($old[0], min($old[1], $b.value - 1)), (max($old[0], $b.value), $old[1]))
+		!! ((max($old[0], $b.value + 1), $old[1]), ($old[0], min($old[1], $b.value)));
+
+	for @new -> $i {
+		$i = Nil if $i[0] > $i[1];
+	}
+
+	(%(|$i, $b.attr => @new[0]), %(|$i, $b.attr => @new[1]))
+}
+
+sub punch($start, %workflows) {
+	my $Q = [[$start, 'in'],];
+
+	gather while $Q.elems {
+		my ($i, $chain) = $Q.shift;
+
+		if $chain eq 'A'|'R' {
+			take $i if $chain eq 'A';
+			next;
+		}
+
+		my $w = %workflows{$chain};
+
+		for $w.branches -> $b {
+			my ($pass, $j) = cut-item($i, $b);
+
+			if $pass.values.all !=== Nil {
+				$Q.push([$pass, $b.target]);
+			}
+
+			last if $j.values.any === Nil;
+			$i = $j;
+		}
+
+		if $i.values.all !=== Nil {
+			$Q.push([$i, $w.default]);
+		}
+	}
+}
+
+sub combine($i) {
+	[*] $i.values.map({ $^a[1] - $^a[0] + 1 })
+}
+
+our sub part2(IO::Handle $in) {
+	my (%workflows, @items) := parse($in);
+
+	my %template =
+		x => (1, 4000),
+		m => (1, 4000),
+		a => (1, 4000),
+		s => (1, 4000);
+
+	[+] punch(%template, %workflows).map(-> $i { [*]  $i.values.map({ $^a[1] - $^a[0] + 1 }) })
+}
